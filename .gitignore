@@ -1,0 +1,22 @@
+# Ignore the GloVe embeddings and other data
+*.txt
+data/
+ml 1/data/
+
+# Ignore the heavy machine learning models
+*.keras
+*.h5
+*.pkl
+
+# Ignore the virtual environment (thousands of tiny files)
+venv/
+env/
+
+# Ignore Python's temporary files
+__pycache__/
+*.pyc
+
+# Ignore the local database
+db.sqlite3
+#ignore the old notebook
+ml 1/notebooks/sourcecodeold.ipynb

@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Toxicity Dashboard | Dual-Engine Analysis</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        :root {
+            --glass-bg: rgba(30, 41, 59, 0.7);
+            --accent-blue: #38bdf8;
+            --accent-danger: #ef4444;
+            --accent-success: #22c55e;
+            --text-muted: #94a3b8;
+        }
+
+        body { 
+            background-color: #0f172a; 
+            font-family: 'Inter', sans-serif; 
+            color: #f8fafc; 
+            min-height: 100vh; 
+        }
+
+        .glass-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.4);
+        }
+
+        textarea { 
+            background-color: #1e293b !important; 
+            color: #ffffff !important; 
+            border: 1px solid #334155 !important;
+            border-radius: 12px !important;
+            transition: all 0.3s ease;
+            resize: none;
+        }
+
+        textarea:focus { 
+            border-color: var(--accent-blue) !important; 
+            box-shadow: 0 0 15px rgba(56, 189, 248, 0.2) !important; 
+            outline: none; 
+        }
+
+        textarea::placeholder { color: var(--text-muted) !important; }
+
+        .progress { 
+            background-color: rgba(255, 255, 255, 0.05); 
+            border-radius: 20px; 
+            height: 8px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            transition: width 1.5s cubic-bezier(0.1, 0, 0.3, 1);
+            width: 0; 
+        }
+
+        .metric-label { 
+            font-size: 0.7rem; 
+            font-weight: 700; 
+            color: var(--text-muted); 
+            text-transform: uppercase; 
+            letter-spacing: 0.5px;
+        }
+
+        .badge-engine {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 10px;
+            border-radius: 12px;
+        }
+
+        .btn-analyze {
+            background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%);
+            border: none;
+            transition: transform 0.2s;
+        }
+
+        .btn-analyze:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(56, 189, 248, 0.4);
+        }
+    </style>
+</head>
+<body>
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-9">
+            
+            <div class="glass-card p-4 mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4 class="text-info fw-bold mb-0"><i class="bi bi-shield-check me-2"></i>Toxicity Detector</h4>
+                    {% if processing_time %}
+                        <span class="badge rounded-pill bg-dark text-secondary border border-secondary px-3">
+                            <i class="bi bi-cpu me-1"></i> {{ processing_time }}s
+                        </span>
+                    {% endif %}
+                </div>
+                
+                <form method="POST">
+                    {% csrf_token %}
+                    <textarea name="text_input" class="form-control mb-3" rows="4" 
+                              placeholder="Enter message to analyze context and intent...">{{ user_input }}</textarea>
+                    <button type="submit" class="btn btn-primary btn-lg w-100 fw-bold btn-analyze">
+                        Run Dual-Engine Analysis
+                    </button>
+                </form>
+            </div>
+
+            {% if results %}
+            <div class="glass-card p-4">
+                <div class="row align-items-center g-4">
+                    
+                    <div class="col-md-5 text-center position-relative">
+                        <canvas id="gaugeChart"></canvas>
+                        <div style="position: absolute; top: 65%; left: 50%; transform: translate(-50%, -50%);">
+                            <h1 class="fw-bold mb-0 display-5">{{ results.ui_score }}%</h1>
+                            <span class="badge {% if results.ui_label == 'Toxic' %}bg-danger{% else %}bg-success{% endif %} fs-6 px-3">
+                                {{ results.ui_label }}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-7">
+                        <h5 class="mb-3">Ensemble Consensus</h5>
+                        <div class="row g-3 mb-4">
+                            <div class="col-6">
+                                <div class="badge-engine">
+                                    <div class="metric-label mb-1">BiLSTM (Pattern)</div>
+                                    <div class="h5 mb-0">{{ results.bilstm_raw }}%</div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="badge-engine border-info">
+                                    <div class="metric-label text-info mb-1">BERT (Context)</div>
+                                    <div class="h5 mb-0 text-info">{{ results.bert_raw }}%</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-dark bg-opacity-25 p-3 rounded-3 border border-secondary border-opacity-25">
+                            <p class="small text-secondary mb-0">
+                                <i class="bi bi-lightbulb text-warning me-1"></i>
+                                <strong>Logic:</strong> 
+                                {% if results.bert_raw < 10 and results.bilstm_raw > 40 %}
+                                    BiLSTM flagged identity keywords, but BERT verified a safe context.
+                                {% else %}
+                                    Models reached a consensus based on weighted contextual probability.
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="my-5 opacity-10">
+
+                <div class="row g-4">
+                    <h6 class="text-uppercase fw-bold text-secondary mb-3 small">Probability Breakdown (BiLSTM Weights)</h6>
+                    
+                    {% for cat, score in results.items %}
+                        {% if cat == "toxic" or cat == "severe_toxic" or cat == "obscene" or cat == "threat" or cat == "insult" or cat == "identity_hate" %}
+                        <div class="col-md-6">
+                            <div class="d-flex justify-content-between metric-label mb-2">
+                                <span>
+                                    {% if cat == "severe_toxic" %}
+                                        Severe Toxic
+                                    {% elif cat == "identity_hate" %}
+                                        Identity Hate
+                                    {% else %}
+                                        {{ cat|title }}
+                                    {% endif %}
+                                </span>
+                                <span>{{ score }}%</span>
+                            </div>
+                            <div class="progress">
+                                <div class="progress-bar js-dynamic-bar {% if score > 50 %}bg-danger{% else %}bg-info{% endif %}" 
+                                     role="progressbar" data-width="{{ score }}">
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+
+            {{ results.ui_score|json_script:"ui-score-data" }}
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+    const scoreData = document.getElementById('ui-score-data');
+    if (scoreData) {
+        const score = parseFloat(JSON.parse(scoreData.textContent));
+        const ctx = document.getElementById('gaugeChart').getContext('2d');
+        const color = score > 50 ? '#ef4444' : '#22c55e';
+
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                datasets: [{
+                    data: [score, 100 - score],
+                    backgroundColor: [color, 'rgba(255,255,255,0.05)'],
+                    borderWidth: 0,
+                    circumference: 180,
+                    rotation: 270,
+                    cutout: '85%',
+                    borderRadius: 10
+                }]
+            },
+            options: {
+                aspectRatio: 2,
+                responsive: true,
+                plugins: { legend: { display: false }, tooltip: { enabled: false } }
+            }
+        });
+
+        const bars = document.querySelectorAll('.js-dynamic-bar');
+        setTimeout(() => {
+            bars.forEach(bar => {
+                const width = bar.getAttribute('data-width');
+                bar.style.width = width + '%';
+            });
+        }, 300);
+    }
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

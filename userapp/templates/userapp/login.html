@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login | Toxicity Guard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        body { 
+            background-color: #0f172a; 
+            font-family: 'Inter', sans-serif; 
+            color: #f8fafc; 
+            height: 100vh; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+            margin: 0;
+        }
+        .auth-card { 
+            background: rgba(30, 41, 59, 0.7); 
+            backdrop-filter: blur(12px); 
+            border: 1px solid rgba(255, 255, 255, 0.1); 
+            border-radius: 20px; 
+            padding: 2.5rem; 
+            width: 100%; 
+            max-width: 420px; 
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+        }
+        .brand-logo { color: #38bdf8; font-weight: 700; font-size: 1.5rem; margin-bottom: 1.5rem; display: block; text-align: center; }
+        
+        /* Styling the Django Form fields */
+        p label { display: block; margin-bottom: 5px; font-size: 0.85rem; color: #94a3b8; }
+        input[type="text"], input[type="password"] {
+            width: 100%;
+            padding: 12px;
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            color: white;
+            margin-bottom: 1rem;
+        }
+        input:focus { outline: none; border-color: #38bdf8; box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2); }
+        
+        .btn-primary { 
+            background: #0ea5e9; 
+            border: none; 
+            padding: 12px; 
+            font-weight: 600; 
+            transition: all 0.3s;
+            border-radius: 8px;
+        }
+        .btn-primary:hover { background: #38bdf8; transform: translateY(-2px); }
+        .errorlist { color: #f87171; list-style: none; padding: 0; font-size: 0.8rem; }
+    </style>
+</head>
+<body>
+
+<div class="auth-card">
+    <span class="brand-logo"> Toxicity Detector</span>
+    <h4 class="text-center mb-4">Welcome Back</h4>
+    
+    <form method="POST">
+        {% csrf_token %}
+        
+        {% if form.errors %}
+            <div class="alert alert-danger py-2 small" style="background: rgba(220, 38, 38, 0.2); border: 1px solid #ef4444; color: #fca5a5;">
+                Invalid username or password.
+            </div>
+        {% endif %}
+
+        {{ form.as_p }}
+
+        <button type="submit" class="btn btn-primary w-100 mt-3">Login to Dashboard</button>
+    </form>
+
+    <div class="mt-4 text-center small">
+        <span class="text-secondary">New user?</span> 
+        <a href="{% url 'register' %}" class="text-info text-decoration-none fw-bold">Create Account</a>
+    </div>
+</div>
+
+</body>
+</html>
